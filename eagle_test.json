@@ -1,0 +1,53 @@
+{
+  "ball_type": "soccer",
+  "stroke_color": "#231916",
+  "panels": [
+    { "index": 0, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 1, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 2, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 3, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 4, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 5, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 6, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 7, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 8, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 9, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 10, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 11, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 12, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 13, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 14, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 15, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 16, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 17, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 18, "fill_type": "solid", "fill": "#ffffff" },
+    { "index": 19, "fill_type": "solid", "fill": "#ffffff" },
+    
+    { "index": 20, "fill_type": "pattern", "pattern": { "type": "stars", "color1": "#000000", "color2": "#ffffff" } },
+    { "index": 21, "fill_type": "pattern", "pattern": { "type": "stars", "color1": "#000000", "color2": "#ffffff" } },
+    { "index": 22, "fill_type": "pattern", "pattern": { "type": "stars", "color1": "#000000", "color2": "#ffffff" } },
+    { "index": 23, "fill_type": "pattern", "pattern": { "type": "stars", "color1": "#000000", "color2": "#ffffff" } },
+    { "index": 24, "fill_type": "pattern", "pattern": { "type": "stars", "color1": "#000000", "color2": "#ffffff" } },
+    { "index": 25, "fill_type": "pattern", "pattern": { "type": "stars", "color1": "#000000", "color2": "#ffffff" } },
+    { "index": 26, "fill_type": "pattern", "pattern": { "type": "stars", "color1": "#000000", "color2": "#ffffff" } },
+    { "index": 27, "fill_type": "pattern", "pattern": { "type": "stars", "color1": "#000000", "color2": "#ffffff" } },
+    { "index": 28, "fill_type": "pattern", "pattern": { "type": "stars", "color1": "#000000", "color2": "#ffffff" } },
+    { "index": 29, "fill_type": "pattern", "pattern": { "type": "stars", "color1": "#000000", "color2": "#ffffff" } },
+    { "index": 30, "fill_type": "pattern", "pattern": { "type": "stars", "color1": "#000000", "color2": "#ffffff" } },
+    { "index": 31, "fill_type": "pattern", "pattern": { "type": "stars", "color1": "#000000", "color2": "#ffffff" } }
+  ],
+  "logos": [
+    {
+      "panel_index": 5,
+      "url_or_data": "https://upload.wikimedia.org/wikipedia/commons/7/7d/Eagle_silhouette.svg",
+      "opacity": 0.4,
+      "scale": 0.8
+    },
+    {
+      "panel_index": 15,
+      "url_or_data": "https://upload.wikimedia.org/wikipedia/commons/7/7d/Eagle_silhouette.svg",
+      "opacity": 0.4,
+      "scale": 0.8
+    }
+  ]
+}

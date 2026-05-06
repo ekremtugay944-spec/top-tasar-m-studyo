@@ -2,28 +2,23 @@ import sys
 import json
 import os
 import re
+import base64
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
-# Namespace ayarları (SVG için)
 ET.register_namespace('', "http://www.w3.org/2000/svg")
 ET.register_namespace('xlink', "http://www.w3.org/1999/xlink")
 
 def update_style(style_str, updates):
     if not style_str:
         style_str = ""
-    # Mevcut style'ı parse et
     style_dict = {}
     for part in style_str.split(';'):
         if ':' in part:
             k, v = part.split(':', 1)
             style_dict[k.strip()] = v.strip()
-    
-    # Güncelle
     for k, v in updates.items():
         style_dict[k] = v
-        
-    # Tekrar string yap
     return ';'.join([f"{k}:{v}" for k, v in style_dict.items()])
 
 def generate_svg(data):
@@ -46,27 +41,28 @@ def generate_svg(data):
     ns = re.match(r'\{.*\}', root.tag)
     ns = ns.group(0) if ns else ''
     
-    # defs ekle/bul
     defs = root.find(f'{ns}defs')
     if defs is None:
         defs = ET.Element(f'{ns}defs')
         root.insert(0, defs)
     
-    # Path'leri id bazında haritala
     paths = list(root.iter(f'{ns}path')) if ns else list(root.iter('path'))
     path_by_id = {p.attrib.get('id'): p for p in paths if 'id' in p.attrib}
     
-    # Panel id sırasını topology'den al
     panel_id_list = list(topology.keys())
     if not panel_id_list:
-        # Topology yoksa fallback olarak sadece panel-* id'lileri al
         panel_id_list = [p.attrib.get("id") for p in paths if p.attrib.get("id", "").startswith("panel-")]
         
     panels = data.get("panels", [])
     stroke_color = data.get("stroke_color")
-    logos = data.get("logos", [])
     
-    # Panelleri güncelle
+    out_dir = "output"
+    os.makedirs(out_dir, exist_ok=True)
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    assets_dir_name = f"assets_{timestamp}"
+    assets_dir_path = os.path.join(out_dir, assets_dir_name)
+    os.makedirs(assets_dir_path, exist_ok=True)
+    
     for panel in panels:
         idx = panel.get("index")
         if idx is None or idx >= len(panel_id_list):
@@ -76,49 +72,64 @@ def generate_svg(data):
         p = path_by_id.get(panel_id)
         if p is None: continue
         
-        fill_type = panel.get("fill_type", "solid")
+        # Sadece düz renk
         fill_val = panel.get("fill", "#ffffff")
-        
-        if fill_type == "gradient":
-            grad = panel.get("gradient", {})
-            grad_id = f"grad_{idx}"
-            grad_type = grad.get("type", "linear")
-            grad_elem = ET.SubElement(defs, f'{ns}linearGradient' if grad_type == "linear" else f'{ns}radialGradient', id=grad_id)
-            
-            if grad_type == "linear":
-                dir_ = grad.get("direction", "horizontal")
-                if dir_ == "vertical":
-                    grad_elem.attrib.update({"x1": "0%", "y1": "0%", "x2": "0%", "y2": "100%"})
-                elif dir_ == "diagonal":
-                    grad_elem.attrib.update({"x1": "0%", "y1": "0%", "x2": "100%", "y2": "100%"})
-                else:
-                    grad_elem.attrib.update({"x1": "0%", "y1": "0%", "x2": "100%", "y2": "0%"})
-                    
-            ET.SubElement(grad_elem, f'{ns}stop', offset="0%", **{"stop-color": grad.get("from", "#ffffff")})
-            ET.SubElement(grad_elem, f'{ns}stop', offset="100%", **{"stop-color": grad.get("to", "#000000")})
-            fill_val = f"url(#{grad_id})"
-            
-        elif fill_type == "pattern":
-            patt = panel.get("pattern", {})
-            patt_id = f"patt_{idx}"
-            patt_elem = ET.SubElement(defs, f'{ns}pattern', id=patt_id, width="20", height="20", patternUnits="userSpaceOnUse")
-            ET.SubElement(patt_elem, f'{ns}rect', width="20", height="20", fill=patt.get("color1", "#ffffff"))
-            p_type = patt.get("type", "stripes")
-            c2 = patt.get("color2", "#000000")
-            if p_type == "stripes":
-                ET.SubElement(patt_elem, f'{ns}rect', width="10", height="20", fill=c2)
-            elif p_type == "dots":
-                ET.SubElement(patt_elem, f'{ns}circle', cx="10", cy="10", r="5", fill=c2)
-            elif p_type == "waves":
-                ET.SubElement(patt_elem, f'{ns}path', d="M0,10 Q5,0 10,10 T20,10", fill="none", stroke=c2, **{"stroke-width": "2"})
-            elif p_type == "diamonds":
-                ET.SubElement(patt_elem, f'{ns}polygon', points="10,0 20,10 10,20 0,10", fill=c2)
-            fill_val = f"url(#{patt_id})"
-            
         style = p.attrib.get("style", "")
         p.attrib["style"] = update_style(style, {"fill": fill_val})
+        
+        # Görsel (image) ekleme (ClipPath ile)
+        img_data = panel.get("image")
+        if img_data and img_data.get("url_or_data"):
+            data_str = img_data.get("url_or_data")
+            filepath = data_str
             
-    # Stroke rengini güncelle
+            # Base64 çöz ve kaydet
+            if data_str.startswith("data:image"):
+                try:
+                    header, b64 = data_str.split(",", 1)
+                    ext = "png" if "png" in header else ("svg" if "svg" in header else "jpg")
+                    filepath = f"{assets_dir_name}/panel_{idx}.{ext}"
+                    full_filepath = os.path.join(out_dir, filepath)
+                    with open(full_filepath, "wb") as fh:
+                        fh.write(base64.b64decode(b64))
+                except Exception as e:
+                    print(f"Görsel kaydedilemedi (Panel {idx}): {e}")
+                    filepath = data_str # Fallback to original
+            
+            # ClipPath oluştur
+            clip_id = f"clip_{panel_id}_{timestamp}"
+            clip_elem = ET.SubElement(defs, f'{ns}clipPath', id=clip_id)
+            use_elem = ET.SubElement(clip_elem, f'{ns}use')
+            use_elem.attrib[f"{{http://www.w3.org/1999/xlink}}href"] = f"#{panel_id}"
+            
+            # Resmi yerleştir
+            topo = topology.get(panel_id, {})
+            cx, cy = topo.get("center", (0, 0))
+            area = topo.get("area", 4000)
+            
+            scale = img_data.get("scale", 1.0)
+            opacity = img_data.get("opacity", 1.0)
+            ox = img_data.get("offset_x", 0)
+            oy = img_data.get("offset_y", 0)
+            blend_mode = img_data.get("blend_mode", "normal")
+            
+            # Görseli panel sınırlarını kaplayacak boyutta ayarla (Karekök alan * çarpan)
+            side = (area ** 0.5) * scale * 2.0 
+            
+            img_elem = ET.SubElement(root, f'{ns}image', {
+                "x": str(cx - side/2 + ox),
+                "y": str(cy - side/2 + oy),
+                "width": str(side),
+                "height": str(side),
+                "opacity": str(opacity),
+                "preserveAspectRatio": "xMidYMid slice",
+                "clip-path": f"url(#{clip_id})"
+            })
+            if blend_mode != "normal":
+                img_elem.attrib["style"] = f"mix-blend-mode: {blend_mode};"
+                
+            img_elem.attrib[f"{{http://www.w3.org/1999/xlink}}href"] = filepath
+
     if stroke_color:
         for p_id in panel_id_list:
             p = path_by_id.get(p_id)
@@ -126,44 +137,19 @@ def generate_svg(data):
                 style = p.attrib.get("style", "")
                 p.attrib["style"] = update_style(style, {"stroke": stroke_color})
                 
-    # Logoları ekle
-    for logo in logos:
-        p_idx = logo.get("panel_index")
-        url = logo.get("url_or_data")
-        if p_idx is not None and url and p_idx < len(panel_id_list):
-            panel_id = panel_id_list[p_idx]
-            topo = topology.get(panel_id)
-            if topo:
-                cx, cy = topo.get("center", (0, 0))
-                scale = logo.get("scale", 0.5)
-                opacity = logo.get("opacity", 1.0)
-                # Area'ya göre ortalama kenar uzunluğu bul
-                area = topo.get("area", 4000)
-                side = (area ** 0.5) * scale * 1.5
-                img = ET.SubElement(root, f'{ns}image', {
-                    "x": str(cx - side/2),
-                    "y": str(cy - side/2),
-                    "width": str(side),
-                    "height": str(side),
-                    "opacity": str(opacity),
-                    "preserveAspectRatio": "xMidYMid meet"
-                })
-                img.attrib[f"{{http://www.w3.org/1999/xlink}}href"] = url
+    out_svg = os.path.join(out_dir, f"top_{timestamp}.svg")
+    out_pdf = os.path.join(out_dir, f"top_{timestamp}.pdf")
+    out_png = os.path.join(out_dir, f"top_{timestamp}_preview.png")
     
-    os.makedirs("output", exist_ok=True)
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_svg = os.path.join("output", f"top_{timestamp}.svg")
-    out_pdf = os.path.join("output", f"top_{timestamp}.pdf")
-    
-    # SVG Kaydet
     tree.write(out_svg, encoding="utf-8", xml_declaration=True)
     print(f"SVG kaydedildi: {out_svg}")
     
-    # PDF Kaydet (opsiyonel)
     try:
         import cairosvg
         cairosvg.svg2pdf(url=out_svg, write_to=out_pdf)
         print(f"PDF kaydedildi: {out_pdf}")
+        cairosvg.svg2png(url=out_svg, write_to=out_png)
+        print(f"PNG Önizleme kaydedildi: {out_png}")
     except ImportError:
         pass
 

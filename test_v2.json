@@ -1,0 +1,20 @@
+{
+  "ball_type": "soccer",
+  "stroke_color": "#231916",
+  "panels": [
+    { "index": 0, "fill": "#ffffff" },
+    { "index": 1, "fill": "#ffffff" },
+    { 
+      "index": 20, 
+      "fill": "#000000",
+      "image": {
+        "url_or_data": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==",
+        "opacity": 0.8,
+        "scale": 1.0,
+        "offset_x": 0,
+        "offset_y": 0,
+        "blend_mode": "screen"
+      }
+    }
+  ]
+}

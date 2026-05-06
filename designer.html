@@ -3,20 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Top Tasarım Stüdyosu - Pro</title>
+    <title>Top Tasarım Stüdyosu - V3 (MemOS)</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
-        .glass-panel { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); }
         .svg-container { position: relative; overflow: hidden; }
-        .svg-container svg { width: 100%; height: auto; max-height: 600px; transition: transform 0.3s ease; }
-        .svg-container svg path.hexagon, .svg-container svg path.pentagon, .svg-container svg path.volleyball_panel { transition: fill 0.3s ease, stroke 0.3s ease; }
+        .svg-container svg { width: 100%; height: auto; max-height: 500px; transition: transform 0.3s ease; position: relative; z-index: 10; }
+        .svg-container svg path.hexagon, .svg-container svg path.pentagon, .svg-container svg path.volleyball_panel { transition: fill 0.3s ease; }
         .zoom-in svg { transform: scale(1.5); }
-        /* Özel scrollbar */
+        .reference-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; z-index: 20; pointer-events: none; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
@@ -28,131 +26,106 @@
     <script type="text/babel">
         const { useState, useEffect, useRef } = React;
 
-        const THEMES = [
-            { name: "Klasik (Siyah/Beyaz)", type: "soccer", panels: Array.from({length:32}).map((_,i)=>({index:i, fill_type:"solid", fill: (i>19) ? "#000000" : "#ffffff"})) },
-            { name: "Türkiye Teması", type: "soccer", panels: Array.from({length:32}).map((_,i)=>({index:i, fill_type:"solid", fill: (i%2===0) ? "#E30A17" : "#ffffff"})) },
-            { name: "Barcelona", type: "soccer", panels: Array.from({length:32}).map((_,i)=>({index:i, fill_type:"solid", fill: (i%2===0) ? "#A50044" : "#004D98"})) },
-            { name: "Galatasaray", type: "soccer", panels: Array.from({length:32}).map((_,i)=>({index:i, fill_type:"solid", fill: (i%2===0) ? "#A90432" : "#FDB912"})) },
-            { name: "Fenerbahçe", type: "soccer", panels: Array.from({length:32}).map((_,i)=>({index:i, fill_type:"solid", fill: (i%2===0) ? "#001e61" : "#ffed00"})) },
-            { name: "Beşiktaş", type: "soccer", panels: Array.from({length:32}).map((_,i)=>({index:i, fill_type:"solid", fill: (i%2===0) ? "#000000" : "#ffffff"})) },
-            { name: "Lüks Altın", type: "soccer", panels: Array.from({length:32}).map((_,i)=>({index:i, fill_type:"solid", fill: (i>19) ? "#D4AF37" : "#111111"})), stroke: "#D4AF37" },
-            { name: "Çocuk Eğlence", type: "soccer", panels: Array.from({length:32}).map((_,i)=>{const c=["#FF5722","#FFEB3B","#4CAF50","#00BCD4","#E91E63"]; return {index:i, fill_type:"solid", fill: c[i%c.length]}}) }
-        ];
+        const fileToBase64 = (file) => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
+        });
 
         const App = () => {
             const [ballType, setBallType] = useState('soccer');
             const [svgContent, setSvgContent] = useState('');
             const [panels, setPanels] = useState([]);
             const [strokeColor, setStrokeColor] = useState('#231916');
-            const [logos, setLogos] = useState([]);
-            const [naturalLanguage, setNaturalLanguage] = useState('');
+            
+            // Ref Image
+            const [referenceImages, setReferenceImages] = useState([]);
+            const [activeRefIndex, setActiveRefIndex] = useState(0);
+            const [refOpacity, setRefOpacity] = useState(0.0);
+            
+            // Memory State
+            const [memoryDesigns, setMemoryDesigns] = useState([]);
+            const [currentDesignId, setCurrentDesignId] = useState(null);
+            
             const [apiKey, setApiKey] = useState(localStorage.getItem('anthropic_key') || '');
             const [isLoading, setIsLoading] = useState(false);
             const [zoom, setZoom] = useState(false);
             
-            const [savedDesigns, setSavedDesigns] = useState(JSON.parse(localStorage.getItem('saved_designs') || '[]'));
-            const [showThemes, setShowThemes] = useState(false);
-            
+            // Modal
+            const [showMemory, setShowMemory] = useState(false);
+            const [saveMeta, setSaveMeta] = useState({ name: '', summary: '', tags: '', is_golden: false });
+            const [showSaveModal, setShowSaveModal] = useState(false);
+
             const svgRef = useRef(null);
 
-            // Başlangıç panellerini oluştur
             const initPanels = (type) => {
                 const count = type === 'soccer' ? 32 : 18;
-                return Array.from({length: count}).map((_, i) => ({
-                    index: i,
-                    fill_type: 'solid',
-                    fill: '#ffffff',
-                    gradient: {from: '#ffffff', to: '#000000', direction: 'horizontal', type: 'linear'},
-                    pattern: {type: 'stripes', color1: '#ffffff', color2: '#000000'}
-                }));
+                return Array.from({length: count}).map((_, i) => ({ index: i, fill: '#ffffff', image: null }));
             };
+
+            const loadMemory = async () => {
+                try {
+                    const res = await fetch("/api/designs");
+                    if (res.ok) {
+                        const data = await res.json();
+                        setMemoryDesigns(data.designs || []);
+                    }
+                } catch(e) { console.error("Hafıza yüklenemedi", e); }
+            };
+
+            useEffect(() => { loadMemory(); }, []);
 
             useEffect(() => {
                 setPanels(initPanels(ballType));
-                fetch(`templates/${ballType}_blank.svg`)
-                    .then(res => res.text())
-                    .then(text => setSvgContent(text))
-                    .catch(err => console.error("SVG Yükleme Hatası:", err));
+                fetch(`templates/${ballType}_blank.svg`).then(res => res.text()).then(text => setSvgContent(text));
             }, [ballType]);
 
-            // SVG Canlı Güncelleme
             useEffect(() => {
                 if (!svgRef.current) return;
                 const doc = svgRef.current;
-                
-                // Varsayılan id listesi (önce topology'den, yoksa doc'tan çekilebilir ama basitçe class üzerinden de gidebiliriz)
-                // soccer için panel-hex-* ve panel-pent-*, voleybol için panel-vb-*
                 const pathList = Array.from(doc.querySelectorAll('path[id^="panel-"]'));
                 if(pathList.length === 0) return;
 
                 let defs = doc.querySelector('defs');
-                if(!defs) {
-                    defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
-                    doc.querySelector('svg').prepend(defs);
-                }
+                if(!defs) { defs = document.createElementNS("http://www.w3.org/2000/svg", "defs"); doc.querySelector('svg').prepend(defs); }
+
+                const existingImages = doc.querySelectorAll('image.live-image'); existingImages.forEach(img => img.remove());
+                const existingClips = doc.querySelectorAll('clipPath.live-clip'); existingClips.forEach(c => c.remove());
 
                 panels.forEach((p, idx) => {
                     const pathElem = pathList[idx];
                     if(!pathElem) return;
 
-                    let fillVal = p.fill;
-                    
-                    if (p.fill_type === 'gradient') {
-                        const gid = `live_grad_${idx}`;
-                        let grad = doc.querySelector(`#${gid}`);
-                        if(!grad) {
-                            grad = document.createElementNS("http://www.w3.org/2000/svg", p.gradient.type === 'linear' ? "linearGradient" : "radialGradient");
-                            grad.setAttribute("id", gid);
-                            defs.appendChild(grad);
-                        } else {
-                            grad.innerHTML = ''; // reset
-                        }
-                        
-                        if(p.gradient.type === 'linear') {
-                            if(p.gradient.direction === 'vertical') { grad.setAttribute("x1","0%"); grad.setAttribute("y1","0%"); grad.setAttribute("x2","0%"); grad.setAttribute("y2","100%"); }
-                            else if(p.gradient.direction === 'diagonal') { grad.setAttribute("x1","0%"); grad.setAttribute("y1","0%"); grad.setAttribute("x2","100%"); grad.setAttribute("y2","100%"); }
-                            else { grad.setAttribute("x1","0%"); grad.setAttribute("y1","0%"); grad.setAttribute("x2","100%"); grad.setAttribute("y2","0%"); }
-                        }
-                        
-                        const s1 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-                        s1.setAttribute("offset", "0%"); s1.setAttribute("stop-color", p.gradient.from);
-                        const s2 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
-                        s2.setAttribute("offset", "100%"); s2.setAttribute("stop-color", p.gradient.to);
-                        grad.appendChild(s1); grad.appendChild(s2);
-                        fillVal = `url(#${gid})`;
-                    } 
-                    else if (p.fill_type === 'pattern') {
-                        const pid = `live_patt_${idx}`;
-                        let patt = doc.querySelector(`#${pid}`);
-                        if(!patt) {
-                            patt = document.createElementNS("http://www.w3.org/2000/svg", "pattern");
-                            patt.setAttribute("id", pid);
-                            patt.setAttribute("width", "20"); patt.setAttribute("height", "20");
-                            patt.setAttribute("patternUnits", "userSpaceOnUse");
-                            defs.appendChild(patt);
-                        } else {
-                            patt.innerHTML = '';
-                        }
-                        const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                        bg.setAttribute("width", "20"); bg.setAttribute("height", "20"); bg.setAttribute("fill", p.pattern.color1);
-                        patt.appendChild(bg);
-                        
-                        const pt = p.pattern.type;
-                        if(pt === 'stripes') {
-                            const fg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
-                            fg.setAttribute("width", "10"); fg.setAttribute("height", "20"); fg.setAttribute("fill", p.pattern.color2);
-                            patt.appendChild(fg);
-                        } else if(pt === 'dots') {
-                            const fg = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                            fg.setAttribute("cx", "10"); fg.setAttribute("cy", "10"); fg.setAttribute("r", "5"); fg.setAttribute("fill", p.pattern.color2);
-                            patt.appendChild(fg);
-                        }
-                        fillVal = `url(#${pid})`;
-                    }
-
                     const curStyle = pathElem.getAttribute('style') || '';
-                    if(curStyle.includes('fill:')) pathElem.setAttribute('style', curStyle.replace(/fill:[^;]+/, `fill:${fillVal}`));
-                    else pathElem.setAttribute('style', curStyle + `fill:${fillVal};`);
+                    if(curStyle.includes('fill:')) pathElem.setAttribute('style', curStyle.replace(/fill:[^;]+/, `fill:${p.fill}`));
+                    else pathElem.setAttribute('style', curStyle + `fill:${p.fill};`);
+
+                    if (p.image && p.image.url_or_data) {
+                        const pathId = pathElem.getAttribute('id');
+                        const bbox = pathElem.getBBox();
+                        const cx = bbox.x + bbox.width/2; const cy = bbox.y + bbox.height/2;
+                        const side = Math.max(bbox.width, bbox.height) * p.image.scale * 1.5;
+
+                        const clipId = `live_clip_${idx}`;
+                        const clip = document.createElementNS("http://www.w3.org/2000/svg", "clipPath");
+                        clip.setAttribute("id", clipId); clip.setAttribute("class", "live-clip");
+                        const use = document.createElementNS("http://www.w3.org/2000/svg", "use");
+                        use.setAttributeNS("http://www.w3.org/1999/xlink", "href", `#${pathId}`);
+                        clip.appendChild(use); defs.appendChild(clip);
+
+                        const img = document.createElementNS("http://www.w3.org/2000/svg", "image");
+                        img.setAttribute("class", "live-image");
+                        img.setAttribute("x", cx - side/2 + parseFloat(p.image.offset_x||0));
+                        img.setAttribute("y", cy - side/2 + parseFloat(p.image.offset_y||0));
+                        img.setAttribute("width", side); img.setAttribute("height", side);
+                        img.setAttribute("opacity", p.image.opacity);
+                        img.setAttribute("preserveAspectRatio", "xMidYMid slice");
+                        img.setAttribute("clip-path", `url(#${clipId})`);
+                        if(p.image.blend_mode !== 'normal') img.style.mixBlendMode = p.image.blend_mode;
+                        img.setAttributeNS("http://www.w3.org/1999/xlink", "href", p.image.url_or_data);
+                        doc.querySelector('svg').appendChild(img);
+                    }
                 });
 
                 pathList.forEach(p => {
@@ -160,231 +133,368 @@
                     if(curStyle.includes('stroke:')) p.setAttribute('style', curStyle.replace(/stroke:[^;]+/, `stroke:${strokeColor}`));
                     else p.setAttribute('style', curStyle + `stroke:${strokeColor};`);
                 });
-
-                // Canlı önizlemede logo eklemek zordur çünkü bbox hesaplaması lazımdır.
-                // Bu yüzden basit bir proxy gösterim ya da statik bırakıyoruz şimdilik, generator halledecek.
-
             }, [panels, strokeColor, svgContent]);
 
-            const updatePanel = (idx, key, val, subkey) => {
-                const newP = [...panels];
-                if(subkey) newP[idx][key][subkey] = val;
-                else newP[idx][key] = val;
-                setPanels(newP);
+            const updatePanel = (idx, key, val) => { const newP = [...panels]; newP[idx][key] = val; setPanels(newP); };
+            const handlePanelImageUpload = async (idx, file) => {
+                if(!file) return; const b64 = await fileToBase64(file);
+                const newP = [...panels]; newP[idx].image = { url_or_data: b64, opacity: 1.0, scale: 1.0, offset_x: 0, offset_y: 0, blend_mode: "normal" }; setPanels(newP);
+            };
+            const updatePanelImage = (idx, key, val) => { const newP = [...panels]; newP[idx].image[key] = val; setPanels(newP); };
+            const removePanelImage = (idx) => { const newP = [...panels]; newP[idx].image = null; setPanels(newP); };
+
+            const handleRefUpload = async (e) => {
+                if(!e.target.files[0]) return;
+                const b64 = await fileToBase64(e.target.files[0]);
+                setReferenceImages([...referenceImages, { data: b64, name: e.target.files[0].name }]);
+                setActiveRefIndex(referenceImages.length);
             };
 
-            const addLogo = () => setLogos([...logos, {panel_index: 0, url_or_data: '', opacity: 1.0, scale: 0.5}]);
-            const updateLogo = (idx, k, v) => { const l=[...logos]; l[idx][k]=v; setLogos(l); };
-
-            const saveDesign = () => {
-                const name = prompt("Tasarım adı:");
-                if(!name) return;
-                const ds = [...savedDesigns, { name, ballType, panels, strokeColor, logos }];
-                setSavedDesigns(ds);
-                localStorage.setItem('saved_designs', JSON.stringify(ds));
+            const commitSaveDesign = async () => {
+                if(!saveMeta.name) return alert("İsim zorunlu");
+                const payload = {
+                    id: currentDesignId,
+                    name: saveMeta.name,
+                    summary: saveMeta.summary,
+                    tags: saveMeta.tags.split(",").map(t=>t.trim()).filter(t=>t),
+                    is_golden: saveMeta.is_golden,
+                    ballType, panels, strokeColor
+                };
+                
+                try {
+                    const res = await fetch("/api/designs", {
+                        method: "POST", headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify(payload)
+                    });
+                    const result = await res.json();
+                    if(result.status === "ok") {
+                        setCurrentDesignId(result.id);
+                        setShowSaveModal(false);
+                        loadMemory();
+                    }
+                } catch(e) { alert("Kayıt hatası"); }
             };
-            
+
             const loadDesign = (d) => {
                 setBallType(d.ballType);
-                setPanels(d.panels);
-                if(d.strokeColor) setStrokeColor(d.strokeColor);
-                if(d.logos) setLogos(d.logos);
-                setShowThemes(false);
+                const newPanels = initPanels(d.ballType);
+                d.panels.forEach(p => { if(p.index < newPanels.length) newPanels[p.index] = p; });
+                setPanels(newPanels);
+                setStrokeColor(d.strokeColor);
+                setCurrentDesignId(d.id);
+                setSaveMeta({ name: d.name, summary: d.summary||'', tags: (d.tags||[]).join(", "), is_golden: !!d.is_golden });
+                setShowMemory(false);
             };
 
-            const handleAIProcess = async () => {
+            const toggleGolden = async (d, e) => {
+                e.stopPropagation();
+                const payload = {...d, is_golden: !d.is_golden};
+                await fetch("/api/designs", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+                loadMemory();
+            };
+
+            // YENI CLAUDE VISION ENTEGRASYONU
+            const handleVisionDesign = async () => {
                 if (!apiKey) return alert('Anthropic API anahtarı eksik.');
+                if (referenceImages.length === 0) return alert('Lütfen referans görsel yükleyin.');
                 localStorage.setItem('anthropic_key', apiKey);
                 setIsLoading(true);
                 
-                const sysPrompt = `Sen bir futbol/voleybol topu tasarım uzmanısın. Kullanıcı doğal dilde topu tarif eder, sen bunu yapılandırılmış JSON'a çevirirsin.
-Top yapısı:
-- Futbol topu: 32 panel (panel index 0-31. 0-19 Hexagon, 20-31 Pentagon)
-- Voleybol topu: 18 panel (panel index 0-17)
-Çıktı şeması:
+                const currentRef = referenceImages[activeRefIndex];
+                const base64Data = currentRef.data.split(",")[1];
+                const mediaType = currentRef.data.split(";")[0].split(":")[1];
+
+                const promptText = `Bu bir futbol/voleybol topu görseli. Bu tasarımı 32 panelli (20 hexagon + 12 pentagon) klasik futbol topu şablonuna uyarlamam gerekiyor.
+Görseldeki tasarımı analiz et ve şu JSON formatında çıktı ver:
 {
-  "ball_type": "soccer" | "volleyball",
-  "panels": [ {"index": 0, "fill_type": "solid" | "gradient" | "pattern", "fill": "#HEX", "gradient": {"from": "#HEX", "to": "#HEX", "direction": "horizontal|vertical|diagonal", "type": "linear|radial"}, "pattern": {"type": "stripes|dots", "color1": "#HEX", "color2": "#HEX"}} ],
-  "stroke_color": "#HEX",
-  "logos": [ {"panel_index": N, "url_or_data": "url_or_base64", "opacity": 1.0, "scale": 0.5} ]
+  "tasarim_ozeti": "tasarımın 1-2 cümle özeti",
+  "ana_renkler": ["#HEX1", "#HEX2", "#HEX3"],
+  "baskin_motif": "geometrik/organik/illüzyon/sade vb.",
+  "panel_dagilimi": {
+    "hexagonlar": [ {"index": 0, "fill": "#HEX"}, {"index": 1, "fill": "#HEX"} ... ],
+    "pentagonlar": [ {"index": 20, "fill": "#HEX"} ... ]
+  },
+  "stroke_color": "#000",
+  "ekvator_efekti": "varsa açıkla, yoksa null",
+  "ozel_efektler": "gradient, illüzyon vb. varsa",
+  "uygulama_notlari": "dikkat edilmesi gerekenler"
 }
-Renk anlayışı: Barcelona(#A50044, #004D98), Lüks(#000000, #D4AF37), Klasik(siyah-beyaz).
-Eğer belirsizse makul doldur. SADECE JSON ver.`;
+Not: Hexagon indexleri 0-19 arasıdır. Pentagon indexleri 20-31 arasıdır.
+Sadece JSON döndür, başka açıklama yapma.`;
 
                 try {
                     const res = await fetch("https://api.anthropic.com/v1/messages", {
                         method: "POST",
                         headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerously-allow-browser": "true" },
                         body: JSON.stringify({
-                            model: "claude-3-5-sonnet-20241022", max_tokens: 1500, system: sysPrompt,
-                            messages: [{ role: "user", content: naturalLanguage }]
+                            model: "claude-3-5-sonnet-20241022", max_tokens: 4096,
+                            messages: [
+                                { role: "user", content: [
+                                    { type: "image", source: { type: "base64", media_type: mediaType, data: base64Data } },
+                                    { type: "text", text: promptText }
+                                ]}
+                            ]
                         })
                     });
                     const result = await res.json();
                     if(result.content) {
                         const jsonStr = result.content[0].text.replace(/```json/g, '').replace(/```/g, '').trim();
                         const parsed = JSON.parse(jsonStr);
-                        if(parsed.ball_type) setBallType(parsed.ball_type);
                         
-                        // Merge with existing defaults
-                        const newPanels = initPanels(parsed.ball_type || ballType);
-                        if(parsed.panels) {
-                            parsed.panels.forEach(aiP => {
-                                if(aiP.index < newPanels.length) newPanels[aiP.index] = {...newPanels[aiP.index], ...aiP};
-                            });
+                        setBallType("soccer");
+                        const newPanels = initPanels("soccer");
+                        
+                        if(parsed.panel_dagilimi) {
+                            if(parsed.panel_dagilimi.hexagonlar) parsed.panel_dagilimi.hexagonlar.forEach(p => { if(p.index<20) newPanels[p.index].fill = p.fill; });
+                            if(parsed.panel_dagilimi.pentagonlar) parsed.panel_dagilimi.pentagonlar.forEach(p => { if(p.index>=20 && p.index<32) newPanels[p.index].fill = p.fill; });
                         }
                         setPanels(newPanels);
                         if(parsed.stroke_color) setStrokeColor(parsed.stroke_color);
-                        if(parsed.logos) setLogos(parsed.logos);
+                        alert(`Analiz Tamamlandı:\nÖzet: ${parsed.tasarim_ozeti}\nMotif: ${parsed.baskin_motif}\nNotlar: ${parsed.uygulama_notlari}`);
                     }
-                } catch (e) {
-                    alert("AI İşlemi başarısız.");
-                    console.error(e);
-                } finally { setIsLoading(false); }
+                } catch (e) { alert("Vision AI Hatası"); console.error(e); } finally { setIsLoading(false); }
+            };
+
+            // AI'NIN HAFIZAYI KULLANMASI
+            const handleProactiveSuggest = async () => {
+                if (!apiKey) return alert('API Key gerekli.');
+                setIsLoading(true);
+                
+                const golden = memoryDesigns.filter(d => d.is_golden);
+                const recent = memoryDesigns.slice(-5);
+                
+                const sysPrompt = `Sen Gözde Plastik / Prime Sports için top tasarım uzmanısın.
+KULLANICI ZEVKİ (geçmiş altın örnekler):
+${golden.map(d => `- "${d.name}": ${d.summary}, etiketler: ${(d.tags||[]).join(", ")}`).join("\n")}
+
+SON ÜRETİLEN TASARIMLAR:
+${recent.map(d => `- ${d.name}`).join("\n")}
+
+Kullanıcı zevkini dikkate al. Altın örneklere bakarak "Daha önce yapılmamış yeni ve harika bir kombinasyon" düşün (trendlere veya mevsimsel ögelere uygun).
+Sadece 32 panelli (0-19 hex, 20-31 pent) futbol topu için panel renk dağılımı (fill) JSON'u ver:
+{
+  "name": "Önerilen isim",
+  "summary": "Neden bunu önerdin?",
+  "stroke_color": "#HEX",
+  "panels": [{"index":0, "fill":"#HEX"}...]
+}
+Sadece JSON döndür.`;
+
+                try {
+                    const res = await fetch("https://api.anthropic.com/v1/messages", {
+                        method: "POST", headers: { "Content-Type": "application/json", "x-api-key": apiKey, "anthropic-version": "2023-06-01", "anthropic-dangerously-allow-browser": "true" },
+                        body: JSON.stringify({
+                            model: "claude-3-5-sonnet-20241022", max_tokens: 2000, system: sysPrompt,
+                            messages: [{ role: "user", content: "Bana yeni bir tasarım öner ve uygula." }]
+                        })
+                    });
+                    const result = await res.json();
+                    if(result.content) {
+                        const jsonStr = result.content[0].text.replace(/```json/g, '').replace(/```/g, '').trim();
+                        const parsed = JSON.parse(jsonStr);
+                        
+                        setBallType("soccer");
+                        const newPanels = initPanels("soccer");
+                        parsed.panels.forEach(p => { if(p.index<32) newPanels[p.index].fill = p.fill; });
+                        setPanels(newPanels);
+                        setStrokeColor(parsed.stroke_color);
+                        
+                        setSaveMeta({ name: parsed.name, summary: parsed.summary, tags: 'oneri, ai', is_golden: false });
+                        setCurrentDesignId(null);
+                        alert(`Yapay Zeka Önerisi: ${parsed.name}\n\n${parsed.summary}`);
+                    }
+                } catch(e) { alert("AI Hatası"); console.error(e); } finally { setIsLoading(false); }
             };
 
             const downloadJson = () => {
-                const data = { ball_type: ballType, panels, stroke_color: strokeColor, logos };
+                const data = { ball_type: ballType, panels, stroke_color: strokeColor };
                 const blob = new Blob([JSON.stringify(data, null, 2)], {type: "application/json"});
-                const url = URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url; a.download = `tasarim_${Date.now()}.json`;
-                a.click();
+                const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `tasarim_${Date.now()}.json`; a.click();
             };
 
             return (
-                <div className="min-h-screen p-4 flex flex-col gap-4 max-w-[1400px] mx-auto text-sm">
-                    {/* Header */}
-                    <header className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                        <div>
-                            <h1 className="text-2xl font-bold text-indigo-700">Top Tasarım Stüdyosu Pro</h1>
+                <div className="min-h-screen p-4 flex flex-col gap-4 max-w-[1600px] mx-auto text-sm">
+                    <header className="flex justify-between items-center bg-white p-4 rounded-xl shadow border border-slate-200">
+                        <div className="flex items-center gap-4">
+                            <h1 className="text-2xl font-bold text-indigo-700">MemOS - Tasarım Stüdyosu</h1>
+                            <button onClick={()=>setShowMemory(true)} className="bg-indigo-100 text-indigo-700 px-4 py-2 rounded font-medium hover:bg-indigo-200">Tasarım Geçmişi (Hafıza)</button>
+                            <button onClick={handleProactiveSuggest} disabled={isLoading} className="bg-amber-100 text-amber-700 px-4 py-2 rounded font-bold hover:bg-amber-200 border border-amber-300 shadow-sm">
+                                💡 Bana Bir Tasarım Öner
+                            </button>
                         </div>
                         <div className="flex gap-2">
-                            <button onClick={()=>setShowThemes(true)} className="bg-orange-100 text-orange-700 px-4 py-2 rounded font-medium hover:bg-orange-200">Hızlı Şablonlar</button>
                             <input type="password" placeholder="Anthropic API Key" className="px-3 py-1 border rounded w-48 text-xs" value={apiKey} onChange={e=>setApiKey(e.target.value)} />
                         </div>
                     </header>
 
                     <div className="grid grid-cols-12 gap-4 h-[calc(100vh-120px)]">
-                        {/* Sol Menü: Kayıtlar & Temel */}
-                        <div className="col-span-2 flex flex-col gap-4 overflow-y-auto">
-                            <div className="bg-white p-4 rounded-xl border border-slate-200">
-                                <h3 className="font-bold mb-3">Model</h3>
-                                <select value={ballType} onChange={e=>setBallType(e.target.value)} className="w-full p-2 border rounded bg-slate-50">
+                        
+                        {/* Sol Menü: Paneller */}
+                        <div className="col-span-3 bg-white p-4 rounded-xl border border-slate-200 flex flex-col gap-4 overflow-y-auto">
+                            <div className="flex gap-2 items-center">
+                                <select value={ballType} onChange={e=>setBallType(e.target.value)} className="flex-1 p-2 border rounded bg-slate-50 font-bold">
                                     <option value="soccer">Futbol Topu (32 Panel)</option>
                                     <option value="volleyball">Voleybol Topu (18 Panel)</option>
                                 </select>
-                                <div className="mt-4">
-                                    <label className="text-xs text-slate-500 block mb-1">Dikiş Rengi</label>
-                                    <input type="color" value={strokeColor} onChange={e=>setStrokeColor(e.target.value)} className="w-full h-8" />
-                                </div>
+                                <input type="color" value={strokeColor} onChange={e=>setStrokeColor(e.target.value)} className="w-10 h-10 rounded border" title="Dikiş Rengi" />
                             </div>
 
-                            <div className="bg-white p-4 rounded-xl border border-slate-200 flex-1">
-                                <h3 className="font-bold mb-3">Kütüphane</h3>
-                                <button onClick={saveDesign} className="w-full bg-slate-100 py-2 rounded text-slate-700 hover:bg-slate-200 mb-3">+ Tasarımı Kaydet</button>
-                                <ul className="space-y-2">
-                                    {savedDesigns.map((d, i) => (
-                                        <li key={i} className="p-2 bg-slate-50 border rounded cursor-pointer hover:border-indigo-400" onClick={()=>loadDesign(d)}>
-                                            {d.name}
-                                        </li>
-                                    ))}
-                                </ul>
-                            </div>
-                        </div>
-
-                        {/* Orta: Paneller ve Logolar */}
-                        <div className="col-span-3 bg-white p-4 rounded-xl border border-slate-200 overflow-y-auto">
-                            <h3 className="font-bold mb-3">Paneller</h3>
                             <div className="space-y-3">
                                 {panels.map((p, i) => (
                                     <div key={i} className="p-3 bg-slate-50 border rounded-lg">
                                         <div className="flex justify-between items-center mb-2">
-                                            <span className="font-semibold text-xs">Panel {i}</span>
-                                            <select value={p.fill_type} onChange={e=>updatePanel(i, 'fill_type', e.target.value)} className="text-xs border rounded p-1">
-                                                <option value="solid">Düz Renk</option>
-                                                <option value="gradient">Gradyan</option>
-                                                <option value="pattern">Desen</option>
-                                            </select>
+                                            <span className="font-semibold text-xs text-slate-500">Panel {i}</span>
+                                            <input type="color" value={p.fill} onChange={e=>updatePanel(i, 'fill', e.target.value)} className="w-8 h-8 rounded" />
                                         </div>
-                                        {p.fill_type === 'solid' && (
-                                            <input type="color" value={p.fill} onChange={e=>updatePanel(i, 'fill', e.target.value)} className="w-full h-8" />
-                                        )}
-                                        {p.fill_type === 'gradient' && (
-                                            <div className="flex gap-2">
-                                                <input type="color" value={p.gradient.from} onChange={e=>updatePanel(i, 'gradient', e.target.value, 'from')} className="w-1/2 h-8" />
-                                                <input type="color" value={p.gradient.to} onChange={e=>updatePanel(i, 'gradient', e.target.value, 'to')} className="w-1/2 h-8" />
+                                        
+                                        {!p.image ? (
+                                            <div className="mt-2">
+                                                <input type="file" accept="image/*" className="hidden" id={`file-p-${i}`} onChange={e => handlePanelImageUpload(i, e.target.files[0])} />
+                                                <label htmlFor={`file-p-${i}`} className="block text-center text-[10px] bg-indigo-50 text-indigo-600 py-1 rounded cursor-pointer border border-indigo-200 hover:bg-indigo-100">
+                                                    + Görsel/Logo Gömdür
+                                                </label>
                                             </div>
-                                        )}
-                                        {p.fill_type === 'pattern' && (
-                                            <div className="flex gap-2">
-                                                <input type="color" value={p.pattern.color1} onChange={e=>updatePanel(i, 'pattern', e.target.value, 'color1')} className="w-1/2 h-8" title="Arkaplan" />
-                                                <input type="color" value={p.pattern.color2} onChange={e=>updatePanel(i, 'pattern', e.target.value, 'color2')} className="w-1/2 h-8" title="Desen Rengi" />
+                                        ) : (
+                                            <div className="mt-2 pt-2 border-t border-slate-200 text-xs flex flex-col gap-2">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-indigo-600 font-semibold truncate w-20">Görsel Aktif</span>
+                                                    <button onClick={()=>removePanelImage(i)} className="text-red-500 hover:text-red-700">Sil</button>
+                                                </div>
+                                                <div className="flex gap-2">
+                                                    <input type="number" step="0.1" title="Ölçek" placeholder="Scale" value={p.image.scale} onChange={e=>updatePanelImage(i, 'scale', parseFloat(e.target.value))} className="w-1/3 p-1 border rounded" />
+                                                    <input type="number" title="X Offset" placeholder="X" value={p.image.offset_x} onChange={e=>updatePanelImage(i, 'offset_x', parseFloat(e.target.value))} className="w-1/3 p-1 border rounded" />
+                                                    <input type="number" title="Y Offset" placeholder="Y" value={p.image.offset_y} onChange={e=>updatePanelImage(i, 'offset_y', parseFloat(e.target.value))} className="w-1/3 p-1 border rounded" />
+                                                </div>
+                                                <select value={p.image.blend_mode} onChange={e=>updatePanelImage(i, 'blend_mode', e.target.value)} className="p-1 border rounded text-slate-600">
+                                                    <option value="normal">Normal</option>
+                                                    <option value="multiply">Multiply (Harmanla)</option>
+                                                </select>
                                             </div>
                                         )}
                                     </div>
                                 ))}
                             </div>
-
-                            <h3 className="font-bold mt-6 mb-3">Logolar</h3>
-                            <button onClick={addLogo} className="w-full bg-slate-100 py-2 rounded text-slate-700 mb-3">+ Logo Ekle</button>
-                            {logos.map((l, idx) => (
-                                <div key={idx} className="p-2 bg-slate-50 border rounded mb-2 text-xs">
-                                    <input type="number" placeholder="Panel Index" value={l.panel_index} onChange={e=>updateLogo(idx, 'panel_index', parseInt(e.target.value))} className="w-full mb-1 p-1 border" />
-                                    <input type="text" placeholder="URL veya Base64" value={l.url_or_data} onChange={e=>updateLogo(idx, 'url_or_data', e.target.value)} className="w-full mb-1 p-1 border" />
-                                    <div className="flex gap-2">
-                                        <input type="range" min="0" max="1" step="0.1" value={l.opacity} onChange={e=>updateLogo(idx, 'opacity', parseFloat(e.target.value))} className="w-1/2" title="Şeffaflık" />
-                                        <input type="range" min="0.1" max="1.5" step="0.1" value={l.scale} onChange={e=>updateLogo(idx, 'scale', parseFloat(e.target.value))} className="w-1/2" title="Ölçek" />
-                                    </div>
-                                </div>
-                            ))}
                         </div>
 
-                        {/* Sağ: Önizleme ve AI */}
-                        <div className="col-span-7 flex flex-col gap-4">
+                        {/* Orta: Önizleme */}
+                        <div className="col-span-6 flex flex-col gap-4">
                             <div className="bg-white p-4 rounded-xl border border-slate-200 flex-1 flex flex-col relative">
                                 <div className="flex justify-between items-center mb-2">
-                                    <h3 className="font-bold">Canlı Önizleme</h3>
-                                    <button onClick={()=>setZoom(!zoom)} className="text-xs bg-slate-100 px-3 py-1 rounded hover:bg-slate-200">
-                                        {zoom ? "Uzaklaş" : "Yakınlaş"}
-                                    </button>
+                                    <h3 className="font-bold">Canlı SVG Önizleme</h3>
+                                    <div className="flex items-center gap-4">
+                                        {referenceImages.length > 0 && (
+                                            <div className="flex items-center gap-2 text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded">
+                                                <span>Ref Opacity:</span>
+                                                <input type="range" min="0" max="1" step="0.1" value={refOpacity} onChange={e=>setRefOpacity(parseFloat(e.target.value))} className="w-20" />
+                                            </div>
+                                        )}
+                                        <button onClick={()=>setZoom(!zoom)} className="text-xs bg-slate-100 px-3 py-1 rounded hover:bg-slate-200">{zoom ? "Zoom -" : "Zoom +"}</button>
+                                    </div>
                                 </div>
-                                <div className={`bg-slate-50 flex-1 border rounded flex items-center justify-center svg-container ${zoom?'zoom-in':''}`} dangerouslySetInnerHTML={{__html: svgContent}} ref={svgRef}></div>
-                                <p className="text-[10px] text-slate-400 mt-2 text-center">Bu önizleme dijitaldir. Üretilen topta klişe baskı kalitesi ve renklerde küçük farklılıklar olabilir.</p>
+                                <div className={`bg-slate-50 flex-1 border rounded flex items-center justify-center svg-container ${zoom?'zoom-in':''}`}>
+                                    <div dangerouslySetInnerHTML={{__html: svgContent}} ref={svgRef} className="w-full h-full flex justify-center items-center"></div>
+                                    {referenceImages[activeRefIndex] && refOpacity > 0 && (
+                                        <img src={referenceImages[activeRefIndex].data} className="reference-overlay" style={{opacity: refOpacity}} />
+                                    )}
+                                </div>
                             </div>
 
-                            <div className="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                                <h3 className="font-bold text-indigo-900 mb-2 flex items-center gap-2">
-                                    <span className="bg-indigo-600 text-white px-2 py-0.5 rounded text-xs">AI Studio</span> Doğal Dil ile Tasarım
-                                </h3>
-                                <textarea rows="2" className="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="'Gece yarısı temalı, kırmızı detaylı bir top...'" value={naturalLanguage} onChange={e=>setNaturalLanguage(e.target.value)}></textarea>
-                                <div className="mt-2 flex justify-between items-center">
-                                    <button onClick={handleAIProcess} disabled={isLoading} className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded shadow text-sm disabled:opacity-50">
-                                        {isLoading ? "Düşünüyor..." : "AI Üret"}
-                                    </button>
-                                    <button onClick={downloadJson} className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 py-2 rounded shadow text-sm">
-                                        Üretim JSON İndir
-                                    </button>
+                            <div className="bg-white p-4 rounded-xl border border-slate-200 flex justify-between items-center">
+                                <div>
+                                    <div className="font-bold">{saveMeta.name || "İsimsiz Tasarım"}</div>
+                                    <div className="text-xs text-slate-500">{saveMeta.summary || "Henüz kaydedilmedi"}</div>
+                                </div>
+                                <div className="flex gap-2">
+                                    <button onClick={()=>{setCurrentDesignId(null); setSaveMeta({...saveMeta, name:saveMeta.name+' (Kopya)'}); setShowSaveModal(true)}} className="px-4 py-2 bg-slate-100 rounded hover:bg-slate-200 text-xs font-semibold">Kopyala ve Düzenle</button>
+                                    <button onClick={()=>setShowSaveModal(true)} className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 text-xs font-bold">Tasarımı Kaydet</button>
+                                    <button onClick={downloadJson} className="px-4 py-2 bg-emerald-600 text-white rounded hover:bg-emerald-700 text-xs font-bold">SVG Çıktısı İçin İndir (.json)</button>
                                 </div>
                             </div>
+                        </div>
+
+                        {/* Sağ: Referans & Vision */}
+                        <div className="col-span-3 bg-white p-4 rounded-xl border border-slate-200 flex flex-col gap-4 overflow-y-auto">
+                            <h3 className="font-bold text-slate-800 border-b pb-2">Görsel Yükle (Midjourney vb.)</h3>
+                            <div>
+                                <input type="file" accept="image/*" className="hidden" id="ref-upload" onChange={handleRefUpload} />
+                                <label htmlFor="ref-upload" className="block text-center text-sm bg-slate-50 text-slate-600 py-4 rounded-lg cursor-pointer border-2 border-dashed border-slate-300 hover:bg-slate-100 transition">
+                                    + Referans Görsel Ekle
+                                </label>
+                            </div>
+
+                            {referenceImages.length > 0 && (
+                                <div className="flex flex-col gap-2">
+                                    <div className="flex gap-2 overflow-x-auto pb-2">
+                                        {referenceImages.map((ref, idx) => (
+                                            <button key={idx} onClick={()=>setActiveRefIndex(idx)} className={`px-3 py-1 text-xs rounded truncate max-w-24 ${activeRefIndex === idx ? 'bg-indigo-600 text-white' : 'bg-slate-100'}`}>
+                                                {ref.name}
+                                            </button>
+                                        ))}
+                                    </div>
+                                    <div className="relative border rounded bg-black flex items-center justify-center p-1 min-h-[180px]">
+                                        <img src={referenceImages[activeRefIndex].data} className="max-h-48 object-contain" />
+                                    </div>
+                                    
+                                    <button onClick={handleVisionDesign} disabled={isLoading} className="w-full mt-2 bg-purple-600 hover:bg-purple-700 text-white py-3 rounded-lg shadow font-bold text-sm transition">
+                                        {isLoading ? "Analiz Ediliyor..." : "✨ Referans Görsel ile Tasarla"}
+                                    </button>
+                                    <p className="text-[10px] text-slate-500 text-center">Claude Vision, görseli analiz edip 32 panele otomatik renk ataması yapar.</p>
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Temalar Modalı */}
-                    {showThemes && (
-                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-                            <div className="bg-white p-6 rounded-2xl w-[600px] shadow-2xl">
-                                <h2 className="text-xl font-bold mb-4">Hızlı Başlangıç Şablonları</h2>
-                                <div className="grid grid-cols-2 gap-3 max-h-[400px] overflow-y-auto">
-                                    {THEMES.map((t, i) => (
-                                        <button key={i} onClick={()=>loadDesign(t)} className="p-3 border rounded text-left hover:bg-indigo-50 hover:border-indigo-300 transition">
-                                            <div className="font-semibold">{t.name}</div>
-                                            <div className="text-xs text-slate-500">{t.type === 'soccer' ? 'Futbol' : 'Voleybol'}</div>
-                                        </button>
-                                    ))}
+                    {/* Tasarım Geçmişi Modalı */}
+                    {showMemory && (
+                        <div className="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-8">
+                            <div className="bg-white rounded-2xl w-full max-w-5xl h-full max-h-[800px] flex flex-col shadow-2xl overflow-hidden">
+                                <div className="p-6 border-b flex justify-between items-center bg-slate-50">
+                                    <h2 className="text-2xl font-bold text-slate-800">Tasarım Geçmişi (MemOS)</h2>
+                                    <button onClick={()=>setShowMemory(false)} className="text-slate-500 hover:text-black">Kapat</button>
                                 </div>
-                                <div className="mt-4 flex justify-end">
-                                    <button onClick={()=>setShowThemes(false)} className="bg-slate-200 px-4 py-2 rounded">Kapat</button>
+                                <div className="p-6 overflow-y-auto flex-1 bg-slate-100">
+                                    <div className="grid grid-cols-3 gap-6">
+                                        {memoryDesigns.map((d, i) => (
+                                            <div key={i} onClick={()=>loadDesign(d)} className={`bg-white p-4 rounded-xl shadow-sm border-2 cursor-pointer hover:shadow-md transition ${d.is_golden ? 'border-amber-400' : 'border-transparent'}`}>
+                                                <div className="flex justify-between items-start mb-2">
+                                                    <h3 className="font-bold text-lg text-slate-800 truncate">{d.name}</h3>
+                                                    <button onClick={(e)=>toggleGolden(d, e)} className="text-xl" title="Altın Örnek İşaretle">
+                                                        {d.is_golden ? '⭐' : '☆'}
+                                                    </button>
+                                                </div>
+                                                <div className="text-xs text-slate-500 mb-3 h-8 overflow-hidden">{d.summary}</div>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {(d.tags||[]).map((t, idx) => <span key={idx} className="text-[10px] bg-slate-100 px-2 py-0.5 rounded text-slate-600">#{t}</span>)}
+                                                </div>
+                                                <div className="mt-4 pt-3 border-t text-[10px] text-slate-400">
+                                                    Tarih: {new Date(d.created).toLocaleDateString()}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {memoryDesigns.length === 0 && <div className="text-center text-slate-500 py-12">Henüz kaydedilmiş bir tasarım yok.</div>}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Kayıt Modalı */}
+                    {showSaveModal && (
+                        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+                            <div className="bg-white p-6 rounded-2xl w-[400px]">
+                                <h2 className="text-xl font-bold mb-4">Tasarımı Kaydet</h2>
+                                <div className="space-y-4">
+                                    <div><label className="block text-xs font-bold mb-1">Tasarım Adı</label><input type="text" className="w-full border p-2 rounded" value={saveMeta.name} onChange={e=>setSaveMeta({...saveMeta, name: e.target.value})} /></div>
+                                    <div><label className="block text-xs font-bold mb-1">Özet / Notlar</label><textarea className="w-full border p-2 rounded" value={saveMeta.summary} onChange={e=>setSaveMeta({...saveMeta, summary: e.target.value})}></textarea></div>
+                                    <div><label className="block text-xs font-bold mb-1">Etiketler (Virgülle ayırın)</label><input type="text" className="w-full border p-2 rounded" value={saveMeta.tags} onChange={e=>setSaveMeta({...saveMeta, tags: e.target.value})} placeholder="luks, kirmizi, cocuk..." /></div>
+                                    <label className="flex items-center gap-2 cursor-pointer">
+                                        <input type="checkbox" checked={saveMeta.is_golden} onChange={e=>setSaveMeta({...saveMeta, is_golden: e.target.checked})} />
+                                        <span className="text-sm font-bold text-amber-600">⭐ Altın Örnek (AI öğrensin)</span>
+                                    </label>
+                                </div>
+                                <div className="mt-6 flex justify-end gap-2">
+                                    <button onClick={()=>setShowSaveModal(false)} className="px-4 py-2 bg-slate-200 rounded">İptal</button>
+                                    <button onClick={commitSaveDesign} className="px-4 py-2 bg-indigo-600 text-white rounded font-bold">Kaydet</button>
                                 </div>
                             </div>
                         </div>
@@ -392,9 +502,7 @@ Eğer belirsizse makul doldur. SADECE JSON ver.`;
                 </div>
             );
         };
-
-        const root = ReactDOM.createRoot(document.getElementById('root'));
-        root.render(<App />);
+        const root = ReactDOM.createRoot(document.getElementById('root')); root.render(<App />);
     </script>
 </body>
 </html>

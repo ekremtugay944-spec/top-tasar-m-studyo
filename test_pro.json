@@ -1,0 +1,47 @@
+{
+  "ball_type": "soccer",
+  "stroke_color": "#D4AF37",
+  "panels": [
+    {
+      "index": 0,
+      "fill_type": "solid",
+      "fill": "#004D98"
+    },
+    {
+      "index": 1,
+      "fill_type": "gradient",
+      "gradient": {
+        "from": "#A50044",
+        "to": "#004D98",
+        "direction": "diagonal",
+        "type": "linear"
+      }
+    },
+    {
+      "index": 2,
+      "fill_type": "pattern",
+      "pattern": {
+        "type": "stripes",
+        "color1": "#ffffff",
+        "color2": "#A50044"
+      }
+    },
+    {
+      "index": 3,
+      "fill_type": "pattern",
+      "pattern": {
+        "type": "dots",
+        "color1": "#004D98",
+        "color2": "#ffffff"
+      }
+    }
+  ],
+  "logos": [
+    {
+      "panel_index": 0,
+      "url_or_data": "https://upload.wikimedia.org/wikipedia/commons/a/ab/Logo_FC_Barcelona.svg",
+      "opacity": 0.9,
+      "scale": 0.8
+    }
+  ]
+}
