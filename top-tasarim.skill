@@ -1,0 +1,34 @@
+# Top Tasarım Sistemi (Top Tasarım Skill)
+
+## Skill Description
+Bu skill, kullanıcıdan gelen doğal dil komutlarını (örneğin "kırmızı ve beyaz renklerde bir futbol topu, siyah dikişli") alıp, bunu yapılandırılmış JSON formatına çevirir ve proje içerisindeki `generator.py` script'i yardımıyla fabrikaya gönderime hazır vektörel şablonlar (SVG) üretmeyi amaçlar.
+
+## Capabilities
+1. **Doğal Dil Analizi:** Kullanıcının tasarım tariflerini analiz ederek renkleri, desenleri ve panel yerleşimlerini JSON nesnesine dönüştürür.
+2. **SVG Manipülasyonu:** `generator.py` aracılığıyla orijinal boş top şablonları (futbol veya voleybol) üzerindeki `style` etiketlerini (fill ve stroke) güncelleyip, SVG dosyası üretir.
+
+## Input Format
+Kullanıcıdan bir metin komutu beklenir:
+"Top türü [futbol/voleybol], panel renkleri [...], dikiş rengi [...]"
+
+## Output Format & Workflow
+1. Kullanıcıdan gelen tasarım isteği, aşağıdaki JSON formatına çevrilir:
+```json
+{
+  "ball_type": "soccer",
+  "panels": [
+    {"index": 0, "fill": "#FF0000"},
+    {"index": 1, "fill": "#FFFFFF"}
+  ],
+  "stroke_color": "#000000"
+}
+```
+2. Eğer bu işlemi UI üzerinden yapmıyorsan, `test_tasarim.json` adıyla bu dosyayı oluştur.
+3. Arka planda şu komutu çalıştırarak vektörü üret:
+`python generator.py test_tasarim.json`
+4. Kullanıcıya sonucun `output/` klasörüne başarıyla kaydedildiğini bildir.
+
+## Kısıtlamalar
+- Asla orijinal `.ai` şablon dosyalarını silme veya yapısını değiştirme.
+- Sadece `templates/` içerisindeki boş şablonları referans al.
+- Üreticiye gidecek dosyaların `viewBox`, `canvas` boyutları ve `path` hiyerarşisi kesinlikle bozulmamalıdır; sadece CSS style içindeki `fill` ve `stroke` değerleri değiştirilmelidir.

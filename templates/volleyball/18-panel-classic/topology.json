@@ -1,0 +1,488 @@
+{
+  "panel-vb-01": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      1.6989999999999839,
+      -17.27967751300414
+    ],
+    "area": 10055.321778316438
+  },
+  "panel-vb-02": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      -1.697999999999979,
+      17.27967754252093
+    ],
+    "area": 10055.32178949846
+  },
+  "panel-vb-03": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      96.11399999999996,
+      3.725499999999993
+    ],
+    "area": 10210.024389999995
+  },
+  "panel-vb-04": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      96.11299999999999,
+      3.7255000000000003
+    ],
+    "area": 10210.02439
+  },
+  "panel-vb-05": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      17.27967751300411,
+      1.698499999999953
+    ],
+    "area": 10055.268692961406
+  },
+  "panel-vb-06": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      -17.27967751300411,
+      -1.6979999999999649
+    ],
+    "area": 10055.21560760638
+  },
+  "panel-vb-07": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      -3.725500000000004,
+      96.11300000000004
+    ],
+    "area": 10209.918260000006
+  },
+  "panel-vb-08": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      1.6970000000000027,
+      -17.27967751300414
+    ],
+    "area": 10055.321778316438
+  },
+  "panel-vb-09": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      -1.6980000000000075,
+      17.279677542520915
+    ],
+    "area": 10055.215618788283
+  },
+  "panel-vb-10": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      96.11200000000008,
+      3.7255000000000003
+    ],
+    "area": 10209.918260000011
+  },
+  "panel-vb-11": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      17.279083881207054,
+      1.698499999999953
+    ],
+    "area": 10055.422639053199
+  },
+  "panel-vb-12": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      -17.27817751300411,
+      -1.6979999999999933
+    ],
+    "area": 10055.02619160638
+  },
+  "panel-vb-13": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      -3.7254999999999967,
+      96.11300000000004
+    ],
+    "area": 10209.91826
+  },
+  "panel-vb-14": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      -1.698500000000024,
+      17.280175352794302
+    ],
+    "area": 10055.457291600478
+  },
+  "panel-vb-15": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-16",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      1.6979999999999933,
+      -17.279177513004147
+    ],
+    "area": 10055.405023606389
+  },
+  "panel-vb-16": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-17",
+      "panel-vb-18"
+    ],
+    "center": [
+      -1.698500000000024,
+      17.279677513004117
+    ],
+    "area": 10055.647526961404
+  },
+  "panel-vb-17": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-18"
+    ],
+    "center": [
+      1.6979999999999933,
+      -17.279125415950496
+    ],
+    "area": 10055.385287575356
+  },
+  "panel-vb-18": {
+    "type": "volleyball_panel",
+    "neighbors": [
+      "panel-vb-01",
+      "panel-vb-02",
+      "panel-vb-03",
+      "panel-vb-04",
+      "panel-vb-05",
+      "panel-vb-06",
+      "panel-vb-07",
+      "panel-vb-08",
+      "panel-vb-09",
+      "panel-vb-10",
+      "panel-vb-11",
+      "panel-vb-12",
+      "panel-vb-13",
+      "panel-vb-14",
+      "panel-vb-15",
+      "panel-vb-16",
+      "panel-vb-17"
+    ],
+    "center": [
+      -96.11300000000006,
+      -3.7260000000000026
+    ],
+    "area": 10209.831983999997
+  }
+}

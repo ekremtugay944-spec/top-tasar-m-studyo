@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Panel Topoloji ve ID Doğrulama</title>
+    <style>
+        body { font-family: sans-serif; background: #eee; padding: 20px; text-align: center; }
+        .container { max-width: 1200px; margin: 0 auto; background: #fff; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .svg-wrapper { position: relative; display: inline-block; width: 100%; border: 1px solid #ccc; background: #fafafa; }
+        .svg-wrapper svg { width: 100%; height: auto; max-height: 80vh; }
+        
+        /* Tooltip stili */
+        #tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 8px 12px;
+            border-radius: 4px;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.2s;
+            font-size: 14px;
+            transform: translate(-50%, -100%);
+            margin-top: -10px;
+            white-space: pre-wrap;
+            z-index: 100;
+        }
+
+        /* Hover efektleri */
+        path { transition: opacity 0.2s, stroke-width 0.2s; }
+        path:hover { opacity: 0.8 !important; stroke: #fff !important; stroke-width: 3px !important; cursor: pointer; }
+        
+        .controls { margin-bottom: 20px; }
+        button { padding: 10px 20px; cursor: pointer; font-size: 16px; margin: 0 5px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Panel ID Doğrulama Haritası</h2>
+    <div class="controls">
+        <button onclick="loadTemplate('soccer')">Futbol Topu (32 Panel)</button>
+        <button onclick="loadTemplate('volleyball')">Voleybol Topu (18 Panel)</button>
+    </div>
+    
+    <div class="svg-wrapper" id="svg-container">
+        <!-- SVG will be injected here -->
+        <div id="tooltip"></div>
+    </div>
+</div>
+
+<script>
+    const tooltip = document.getElementById('tooltip');
+    let currentTopology = {};
+
+    function getRandomColor(type) {
+        // Pentagon -> kırmızı tonlar
+        if (type === 'pentagon') {
+            const h = Math.floor(Math.random() * 20) + 350; // 350-360, 0-10 (Kırmızı)
+            const s = Math.floor(Math.random() * 40) + 60; // 60-100%
+            const l = Math.floor(Math.random() * 30) + 40; // 40-70%
+            return `hsl(${h % 360}, ${s}%, ${l}%)`;
+        } 
+        // Hexagon -> mavi tonlar
+        else if (type === 'hexagon') {
+            const h = Math.floor(Math.random() * 40) + 200; // 200-240 (Mavi)
+            const s = Math.floor(Math.random() * 40) + 60; 
+            const l = Math.floor(Math.random() * 30) + 40; 
+            return `hsl(${h}, ${s}%, ${l}%)`;
+        }
+        // Voleybol veya diğer -> yeşil tonlar
+        else {
+            const h = Math.floor(Math.random() * 60) + 120; // 120-180 (Yeşil)
+            const s = Math.floor(Math.random() * 40) + 60; 
+            const l = Math.floor(Math.random() * 30) + 40; 
+            return `hsl(${h}, ${s}%, ${l}%)`;
+        }
+    }
+
+    async function loadTemplate(type) {
+        const svgPath = `../templates/${type}_blank.svg`;
+        const topoDir = type === 'soccer' ? '32-panel-classic' : '18-panel-classic';
+        const topoPath = `../templates/${type}/${topoDir}/topology.json`;
+
+        try {
+            // Topology yükle
+            const topoRes = await fetch(topoPath);
+            if(topoRes.ok) currentTopology = await topoRes.json();
+            else currentTopology = {};
+
+            // SVG yükle
+            const res = await fetch(svgPath);
+            const text = await res.text();
+            
+            const container = document.getElementById('svg-container');
+            // Tooltip silinmesin diye
+            const oldTooltip = document.getElementById('tooltip');
+            container.innerHTML = text;
+            container.appendChild(oldTooltip);
+
+            const svg = container.querySelector('svg');
+            
+            // Tüm path'leri bul
+            const paths = svg.querySelectorAll('path');
+            
+            paths.forEach(p => {
+                const id = p.getAttribute('id');
+                // Sadece panel ID'si atanmış olanlara işlem yap
+                if (id && id.startsWith('panel-')) {
+                    const topoInfo = currentTopology[id] || { type: id.includes('hex') ? 'hexagon' : (id.includes('pent') ? 'pentagon' : 'volleyball') };
+                    
+                    // Renklendir
+                    const color = getRandomColor(topoInfo.type);
+                    const curStyle = p.getAttribute('style') || '';
+                    if(curStyle.includes('fill:')) {
+                        p.setAttribute('style', curStyle.replace(/fill:[^;]+/, `fill:${color}`));
+                    } else {
+                        p.setAttribute('style', curStyle + `fill:${color};`);
+                    }
+
+                    // Hover eventleri
+                    p.addEventListener('mousemove', (e) => {
+                        const neighbors = topoInfo.neighbors ? topoInfo.neighbors.join(', ') : 'Bilinmiyor';
+                        tooltip.innerHTML = `<strong>ID:</strong> ${id}<br/><strong>Tip:</strong> ${topoInfo.type}<br/><strong>Komşular:</strong> ${neighbors}`;
+                        
+                        const rect = container.getBoundingClientRect();
+                        tooltip.style.left = (e.clientX - rect.left) + 'px';
+                        tooltip.style.top = (e.clientY - rect.top) + 'px';
+                        tooltip.style.opacity = 1;
+                    });
+                    
+                    p.addEventListener('mouseleave', () => {
+                        tooltip.style.opacity = 0;
+                    });
+                } else {
+                    // Dikişler veya arka plan (saydam kalsın ki paneller görünsün)
+                    const curStyle = p.getAttribute('style') || '';
+                    if(!curStyle.includes('stroke') && id !== 'path1') {
+                        // arka plan olmasın
+                        p.style.opacity = '0.1';
+                    }
+                }
+            });
+            
+        } catch(e) {
+            console.error(e);
+            alert("Yüklenirken hata oluştu.");
+        }
+    }
+
+    // Başlangıçta futbol yükle
+    loadTemplate('soccer');
+
+</script>
+</body>
+</html>

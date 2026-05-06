@@ -1,0 +1,5 @@
+{
+  "ball_type": "soccer",
+  "panels": [{"index": 0, "fill": "#FF0000"}, {"index": 1, "fill": "#FF0000"}, {"index": 2, "fill": "#FF0000"}, {"index": 3, "fill": "#FF0000"}],
+  "stroke_color": "#000000"
+}
